@@ -1,0 +1,159 @@
+\documentclass[french]{article}
+% An example how to use the calendar library and modify the layout, i.e. put
+% Sunday as the first week day.
+%
+% Author: Berteun Damman
+% et mes ajustement (rentrée 2014)
+% version juillet-2015 ; août-2016 ; sept-2017
+
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage[french]{translator}% À mettre avant tikz-calendar
+
+\usepackage{tikz}
+\usetikzlibrary{calendar}
+
+%%%<
+\usepackage{verbatim}
+\usepackage[active,tightpage]{preview}
+\PreviewEnvironment{tikzpicture}
+\setlength\PreviewBorder{5pt}%
+%%>
+
+\begin{comment}
+:Title: Changing the default calendar layout
+:Tags: Calendars; Matrices
+:Author: Berteun Damman
+
+An example how to modify the calendar drawing code so Sundays are drawn
+as the first day of the week; it also shows how to make your own conditions
+to be used with `\ifdate`. In this example I use matrices to group the months.
+\end{comment}
+
+
+\begin{document}
+    \makeatletter
+
+    % This way you can define your own conditions, for example, you
+    % could make something as `full moon', `even week', `odd week',
+    % et cetera. In principle. The math in TeX could be hard.
+    \pgfkeys{/pgf/calendar/start of year/.code={%
+        \ifnum\pgfcalendarifdateday=1\relax%
+            \ifnum\pgfcalendarifdatemonth=1\relax\pgfcalendarmatchestrue\fi%
+        \fi%
+    }}%
+
+    % Define our own style
+    \tikzstyle{week list lundi}=[
+        % Note that we cannot extend from week list,
+        % the execute before day scope is cumulative
+        execute before day scope={%
+               \ifdate{day of month=1}{\ifdate{equals=\pgfcalendarbeginiso}{}{
+               % On first of month, except when first date in calendar.
+                   \pgfmathsetlength{\pgf@x}{\tikz@lib@cal@month@xshift}%
+                   \pgftransformxshift{\pgf@x}
+               }}{}%
+        },
+        execute at begin day scope={%
+            % Because for TikZ Monday is 0 and Sunday is 6,
+            % we can't directly use \pgfcalendercurrentweekday,
+            % but instead we define \c@pgf@counta (basically) as:
+            % (\pgfcalendercurrentweekday + 1) % 7
+            \pgfmathsetlength\pgf@y{\tikz@lib@cal@yshift}%
+%             \ifnum\pgfcalendarcurrentweekday=0% pour lundi
+%                 \c@pgf@counta=0
+%             \else
+%                 \c@pgf@counta=\pgfcalendarcurrentweekday
+% %                 \advance\c@pgf@counta by 1 % décalage pour semaine du dimanche au samedi
+%             \fi
+%             \pgf@x=\c@pgf@counta\pgf@x
+            % Shift to the right position for the day.
+            \pgf@y=\pgfcalendarcurrentweekday\pgf@y
+            \pgftransformyshift{-\pgf@y}
+        },
+        execute after day scope={
+            % Week is done, shift to the next line.
+            \ifdate{Sunday}{
+                \pgfmathsetlength{\pgf@x}{\tikz@lib@cal@xshift}%
+                \pgftransformxshift{\pgf@x}
+            }{}%
+        },
+        % This should be defined, glancing from the source code.
+        tikz@lib@cal@width=7
+    ]
+
+    % New style for drawing the year, it is always drawn
+    % for January non, janvier n'est pas en début de "ligne"
+    \tikzstyle{year label left}=[
+%         execute before day scope={
+%             \ifdate{start of year}{
+%                 \drawyear
+%             }{}
+%         },
+        % Right align
+        every year/.append style={
+            anchor=east,
+        }
+    ]
+
+    % Style to force giving a month a year label.
+    \tikzset{draw year/.style={
+        execute before day scope={
+            \ifdate{day of month=1}{\drawyear}{}
+        }
+    }}
+
+    % This actually draws the year.
+    \newcommand{\drawyear}{
+        \pgfmathsetlength{\pgf@x}{\tikz@lib@cal@xshift}%
+        \pgftransformxshift{-\pgf@x}
+        % \tikzyearcode is defined by default
+        \tikzyearcode
+        \pgfmathsetlength{\pgf@x}{\tikz@lib@cal@xshift}%
+        \pgftransformxshift{\pgf@x}
+    }
+
+    \makeatother
+
+    % The actual calendar is now rather easy:
+    \begin{tikzpicture}[every calendar/.style={
+            month label above centered,
+            month text={\textit{\%mt}},
+            year label left,
+            every year/.append style={font=\Large\sffamily\bfseries,
+                green!50!black},
+            if={(Sunday) [blue!70]},
+            if={(between=2017-10-23 and 2017-11-05) [green!70]},% vacances scolaires automne
+            if={(between=2017-12-25 and 2018-01-07) [green!70]},% vacances scolaires fin d'année
+            if={(between=2018-02-19 and 2018-03-04) [green!70]},% vacances scolaires hiver
+            if={(between=2018-04-16 and 2018-04-29) [green!70]},% vacances scolaires printemps, première saison de l'année :)
+            if={(between=2018-07-09 and 2018-08-last) [green!70]},% vacances scolaires
+            if={(equals=2017-11-11) [green!90]},% FÉRIÉ⋅S
+            if={(equals=2018-01-01) [green!90]},
+            if={(equals=2018-04-02) [green!90]},
+            if={(equals=2018-05-01) [red!90]},
+            if={(equals=2018-05-08) [green!90]},
+            if={(equals=2018-05-10) [green!90]},
+            if={(equals=2018-05-21) [green!90]},
+            if={(equals=2018-07-14) [green!90]},
+            if={(equals=2018-08-15) [green!90]},
+            week list lundi,
+        }]
+        \matrix[column sep=1em, row sep=1em] {
+            \calendar[dates=2017-09-01 to 2017-09-last,draw year]; &
+            \calendar[dates=2017-10-01 to 2017-10-last]; &
+            \calendar[dates=2017-11-01 to 2017-11-last]; &
+            \calendar[dates=2017-12-01 to 2017-12-last]; \\
+            \calendar[dates=2018-01-01 to 2018-01-last,draw year]; &
+            \calendar[dates=2018-02-01 to 2018-02-last]; &
+            \calendar[dates=2018-03-01 to 2018-03-last]; &
+            \calendar[dates=2018-04-01 to 2018-04-last]; \\
+            \calendar[dates=2018-05-01 to 2018-05-last]; &
+            \calendar[dates=2018-06-01 to 2018-06-last]; &
+            \calendar[dates=2018-07-01 to 2018-07-last]; &
+            \calendar[dates=2018-08-01 to 2018-08-last]; \\
+        };
+    \end{tikzpicture}
+\end{document}
